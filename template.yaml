@@ -1,0 +1,117 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: API de PageGear Mailer
+
+Parameters:
+  Environment:
+    Type: String
+    Default: Prod
+  TimeOut:
+    Type: Number
+    Default: 300
+
+Resources:
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Policies:
+        - PolicyName: HooksPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+                - logs:*
+                - rds:*
+                - lambda:*
+                - ec2:*
+                - ecs:*
+                - s3:*
+                - apigateway:*
+                - execute-api:*
+                - dynamodb:*
+                - cloudwatch:*
+                - sqs:*
+                - sns:*
+                - ses:*
+                - iam:PassRole
+              Resource: "*"
+
+  PageGearMailerFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: PageGearMailer-API
+      Description: 'API de PageGear Mailer'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Handler: index.handler
+      MemorySize: 350
+      Runtime: nodejs22.x
+      AutoPublishAlias: !Ref Environment
+      Timeout: !Ref TimeOut
+      Layers:
+        - arn:aws:lambda:us-east-1:088351854021:layer:LiveConnect-Lambda-Layer:26
+      Environment:
+        Variables:
+          PGCLOUD: "AWS4"
+
+
+  PageGearMailerProdPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Sub '${PageGearMailerFunction.Arn}:${Environment}'
+      Action: lambda:InvokeFunctionUrl
+      FunctionUrlAuthType: NONE
+      Principal: "*"
+
+  PageGearMailerProdUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      AuthType: NONE
+      Qualifier: Prod
+      TargetFunctionArn: !Sub '${PageGearMailerFunction.Arn}'
+
+
+  PageGearMailerDevAlias:
+    Type: AWS::Lambda::Alias
+    Properties:
+      Name: Dev
+      FunctionVersion: $LATEST
+      FunctionName: !Ref PageGearMailerFunction
+
+  PageGearMailerDevPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref PageGearMailerDevAlias
+      Action: lambda:InvokeFunctionUrl
+      FunctionUrlAuthType: NONE
+      Principal: "*"
+
+  PageGearMailerDevUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      AuthType: NONE
+      Qualifier: Dev
+      TargetFunctionArn: !Sub '${PageGearMailerFunction.Arn}'
+
+
+Outputs:
+  PageGearMailer:
+    Description: "ARN de la función PageGearMailer"
+    Value: !Sub '${PageGearMailerFunction.Arn}:${Environment}'
+    Export:
+      Name: !Sub '${AWS::StackName}-PageGearMailer'
+  PageGearMailerDev:
+    Description: "ARN del alias DEV de la función PageGearMailer"
+    Value: !Sub '${PageGearMailerFunction.Arn}:Dev'
+    Export:
+      Name: !Sub '${AWS::StackName}-PageGearMailerDev'

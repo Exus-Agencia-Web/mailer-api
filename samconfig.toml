@@ -1,0 +1,12 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "pagegear-mailer-api"
+s3_bucket = "temp.pagegear.co"
+s3_prefix = "pagegear-mailer-api"
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Environment=\"Prod\""
+confirm_changeset = false
+image_repositories = []
