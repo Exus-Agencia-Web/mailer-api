@@ -53,6 +53,7 @@ Resources:
       FunctionName: PageGearMailer-API
       Description: 'API de PageGear Mailer'
       Role: !GetAtt LambdaExecutionRole.Arn
+      CodeUri: ./source
       Handler: index.handler
       MemorySize: 350
       Runtime: nodejs22.x
@@ -89,72 +90,20 @@ Resources:
       Qualifier: Dev
       TargetFunctionArn: !Sub '${PageGearMailerApiFunction.Arn}'
 
-  ApiCustomDomainCertificate:
-    Type: AWS::CertificateManager::Certificate
-    Properties:
-      DomainName: api.correomasivo.com.co
-      ValidationMethod: DNS
-      Tags:
-        - Key: Name
-          Value: PageGearMailer-API-Cert
-
-  ApiCloudFrontDistribution:
-    Type: AWS::CloudFront::Distribution
-    Properties:
-      DistributionConfig:
-        Enabled: true
-        HttpVersion: http2
-        Aliases:
-          - api.correomasivo.com.co
-        Origins:
-          - Id: LambdaFunctionUrlOrigin
-            DomainName: !Select [2, !Split ['/', !GetAtt PageGearMailerApiFunctionUrl.FunctionUrl]]
-            CustomOriginConfig:
-              OriginProtocolPolicy: https-only
-        DefaultCacheBehavior:
-          TargetOriginId: LambdaFunctionUrlOrigin
-          ViewerProtocolPolicy: redirect-to-https
-          AllowedMethods:
-            - GET
-            - HEAD
-            - OPTIONS
-            - PUT
-            - POST
-            - PATCH
-            - DELETE
-          CachedMethods:
-            - GET
-            - HEAD
-            - OPTIONS
-          Compress: true
-          ForwardedValues:
-            QueryString: true
-            Cookies:
-              Forward: all
-        ViewerCertificate:
-          AcmCertificateArn: !Ref ApiCustomDomainCertificate
-          SslSupportMethod: sni-only
-          MinimumProtocolVersion: TLSv1.2_2021
-
 
 Outputs:
   PageGearMailer:
-    Description: "ARN de la función PageGearMailer"
+    Description: "ARN de la funcion PageGearMailer"
     Value: !Sub '${PageGearMailerApiFunction.Arn}:${Environment}'
     Export:
       Name: !Sub '${AWS::StackName}-PageGearMailer'
   PageGearMailerDev:
-    Description: "ARN del alias DEV de la función PageGearMailer"
+    Description: "ARN del alias DEV de la funcion PageGearMailer"
     Value: !Sub '${PageGearMailerApiFunction.Arn}:Dev'
     Export:
       Name: !Sub '${AWS::StackName}-PageGearMailerDev'
   PageGearMailerUrl:
-    Description: "URL pública de la función PageGearMailer"
+    Description: "URL publica de la funcion PageGearMailer"
     Value: !GetAtt PageGearMailerApiFunctionUrl.FunctionUrl
     Export:
       Name: !Sub '${AWS::StackName}-PageGearMailerUrl'
-  ApiCloudFrontDomain:
-    Description: "Dominio de CloudFront para PageGearMailer"
-    Value: !GetAtt ApiCloudFrontDistribution.DomainName
-    Export:
-      Name: !Sub '${AWS::StackName}-CloudFrontDomain'

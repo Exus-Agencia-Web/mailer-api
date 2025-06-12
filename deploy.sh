@@ -23,19 +23,23 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-# Verificar el estado actual del stack y eliminar si no se puede actualizar
-status=$(aws cloudformation describe-stacks --profile $CLOUD --region $ZONE --stack-name $STACK --query "Stacks[0].StackStatus" --output text 2>/dev/null)
+echo "Construyendo el proyecto"
+echo "Zona: ${ZONE}"
+echo "Perfil: ${CLOUD}"
+echo "Stack: ${STACK}"
+echo ""
 
-if [[ "$status" == "ROLLBACK_FAILED" || "$status" == "ROLLBACK_COMPLETE" || "$status" == "CREATE_FAILED" || "$status" == "DELETE_FAILED" ]]; then
-  echo "El stack $STACK está en estado $status. Eliminándolo antes de continuar..."
-  aws cloudformation delete-stack --stack-name $STACK --region $ZONE --profile $CLOUD
-  echo "Esperando a que se elimine el stack..."
-  aws cloudformation wait stack-delete-complete --stack-name $STACK --region $ZONE --profile $CLOUD
-fi
+echo "Instalando dependencias"
+cd source/
+npm install 
+cd ..
 
+echo ""
+echo "Desplegando el proyecto"
 sam build --profile=$CLOUD
 sam deploy --profile=$CLOUD --region=$ZONE
-rm -rf .aws-sam
+
+#rm -rf .aws-sam
 
 echo ""
 echo "Listo!"
