@@ -9,6 +9,7 @@ jobs:
   deploy:
     env:
       CODECOMMIT_SSH_KEY: ${{ secrets.CODECOMMIT_SSH_KEY }}
+      CODECOMMIT_SSH_KEY_ID: ${{ secrets.CODECOMMIT_SSH_KEY_ID }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -29,11 +30,19 @@ jobs:
         if: env.CODECOMMIT_SSH_KEY != ''
         env:
           CODECOMMIT_SSH_KEY: ${{ secrets.CODECOMMIT_SSH_KEY }}
+          CODECOMMIT_SSH_KEY_ID: ${{ secrets.CODECOMMIT_SSH_KEY_ID }}
         run: |
           mkdir -p ~/.ssh
           echo "$CODECOMMIT_SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan git-codecommit.us-east-1.amazonaws.com >> ~/.ssh/known_hosts
+          # Configurar el usuario (SSH Key ID) para CodeCommit
+          cat >> ~/.ssh/config <<EOF
+          Host git-codecommit.*.amazonaws.com
+            User $CODECOMMIT_SSH_KEY_ID
+            IdentityFile ~/.ssh/id_rsa
+          EOF
+          chmod 600 ~/.ssh/config
 
       - name: Install dependencies for API
         run: |
