@@ -58,7 +58,7 @@ jobs:
         run: sam validate
           
       - name: SAM Build
-        run: sam build --use-container
+        run: sam build
           
       - name: SAM Deploy
         env:
