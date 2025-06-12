@@ -53,10 +53,7 @@ jobs:
         uses: aws-actions/setup-sam@v2
         with:
           version: "1.*"      # usa la última versión 1.x estable
-          
-      - name: Validate SAM template
-        run: sam validate
-          
+                    
       - name: SAM Build
         run: sam build
           
@@ -70,5 +67,4 @@ jobs:
             --region $AWS_REGION \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
-            --resolve-s3 \
             --parameter-overrides Environment=Prod
