@@ -52,7 +52,7 @@ jobs:
       - name: Install AWS SAM CLI
         uses: aws-actions/setup-sam@v2
         with:
-          version: latest
+          version: "1.*"      # usa la última versión 1.x estable
           
       - name: Validate SAM template
         run: sam validate
