@@ -12,8 +12,7 @@
   },
   "author": "Exus Agencia Web",
   "license": "ISC",
-  "dependencies": {},
-  "dependencies-in-layer": {
+  "dependencies": {
     "aws-sdk": "^2.855.0",
     "axios": "^0.20.0",
     "PageGearCoreNode": "git+https://git-codecommit.us-east-1.amazonaws.com/v1/repos/PageGearCoreNode"
