@@ -12,4 +12,4 @@ var email = {
     
 };
 
-module.exports = voice;
+module.exports = email;
