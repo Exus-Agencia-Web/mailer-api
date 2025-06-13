@@ -14,13 +14,48 @@ const MailerReportQueue = "https://sqs.us-east-1.amazonaws.com/098497473728/Page
 /* Encolador Simple */
 var cacheEnvios = {};
 var dataResp = [];
-var queue = {
+var mailer = {
 
     check: async(utils, params, context) => {
-        // return await queue.obtenerMensajes(utils, params, context, [], true);
+        // return await mailer.obtenerMensajes(utils, params, context, [], true);
         return await core.cwe.disable(messageLoopTimmer).catch(); 
     },
+    // n8n
+    getCampaignsTestN8N: async(utils, params) => {
+        let initFrom = (params['initFrom']) ? params['initFrom'] : 0;
+        let sql = dbm.format("SELECT * FROM `m_campanas` WHERE `id_mailer` = %s ", dbm.getSQLV(430));
 
+        if(params['q'] && $params['q'] != '')
+            sql += dbm.format(" and nombre like %s", dbm.getSQLV('%'+params['q']+'%'));
+
+        if(params['id'])
+            sql += dbm.format(" AND id = %s", dbm.getSQLV($params['id']));
+
+        sql += " order by `fecha_ultimo_uso` desc";
+
+        if(params['initFrom'])
+            $sql += dbm.format(" limit %s, 10", getSQLV(initFrom, 'int'));
+
+        let resp = await dbm.conector(sql);
+        if(resp != false){
+            await utils.apiResp(resp,200,'Campañas listadas');
+        }else{
+            await utils.apiError(-1,'Campañas no listadas');
+        }
+    },
+    getRemitentesTestN8N: async(utils, params) => {
+        let sql = dbm.format("SELECT * FROM `remitentes` WHERE `id_mailer` = %s;", dbm.getSQLV(430));
+	    let resp_remite = await dbm.conector(sql);
+	    let resp  = (resp_remite != false) ? resp_remite : [];
+	    await utils.apiResp(resp,200,'Remitentes listados');
+    },
+    sendCampaignsTestN8N: async(utils, params) => {
+        await utils.apiResp(params,200,'Datos enviados');
+    },
+    OAuthResponse: async(utils, params) => {
+        await utils.apiError(-1,'Api key invalida!');
+    },
+    //End n8n
     obtenerMensajes: async(utils, params, context, data = [], check = false) => {
         // Obtener envíos pendientes
         var mensajes = await core.sqs.m.get(messagesQueue, 10).catch();
@@ -35,7 +70,7 @@ var queue = {
                 try {
                     var mensaje = mensajes[m];
 
-                    let resp = await queue.procesarMensaje(JSON.parse(mensaje.Body)).catch();
+                    let resp = await mailer.procesarMensaje(JSON.parse(mensaje.Body)).catch();
 
                     if (typeof resp != "undefined" && resp == 1) {
                         // Si todo esta bien eliminamos el mensaje
@@ -51,7 +86,7 @@ var queue = {
             
             // Lanzar recursiva siempre que tenga mas de 10 seg.
             if (context.getRemainingTimeInMillis() > 10000) {
-                return await queue.obtenerMensajes(utils, params, context, dataResp).catch();
+                return await mailer.obtenerMensajes(utils, params, context, dataResp).catch();
             }
             else {
                 await utils.apiResp(dataResp, 2, "Pausando envios...");
@@ -71,7 +106,7 @@ var queue = {
             for (var m = mensajes.length - 1; m >= 0; m--) {
                 try {
                     var mensaje = mensajes[m];
-                    let resp = await queue.procesarMensaje(JSON.parse(mensaje.body)).catch();
+                    let resp = await mailer.procesarMensaje(JSON.parse(mensaje.body)).catch();
                     console.log("Envio",resp);
                     dataResp.push(resp);
                 }
@@ -88,13 +123,13 @@ var queue = {
         
         if(typeof mensaje.id_envio != "undefined" && mensaje.id_envio>0){  /* Email del Mailer */
 
-    		let envio = await queue.getEnvio(mensaje.id_envio);
+    		let envio = await mailer.getEnvio(mensaje.id_envio);
     		if(envio!=false){
                 var options = {
     				envio:envio,
     				mensaje: mensaje.data
     			};
-    			await queue.enviarMensaje(options).catch();
+    			await mailer.enviarMensaje(options).catch();
     		}else{
     		    console.log("No se encontro el envío #"+mensaje.id_envio);
     		    return -1;
@@ -187,4 +222,4 @@ var queue = {
     }
 };
 
-module.exports = queue;
+module.exports = mailer;
