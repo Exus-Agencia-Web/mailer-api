@@ -29,10 +29,10 @@ echo "Perfil: ${CLOUD}"
 echo "Stack: ${STACK}"
 echo ""
 
-echo "Instalando dependencias"
-cd source/
-npm install 
-cd ..
+#echo "Instalando dependencias"
+#cd source/
+#npm install 
+#cd ..
 
 echo ""
 echo "Desplegando el proyecto"

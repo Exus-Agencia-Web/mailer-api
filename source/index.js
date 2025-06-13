@@ -52,7 +52,78 @@ var utils = {
 	    }
 	    return true; 
 	},
-	sleep: (waitTimeInMs) => new Promise(resolve => setTimeout(resolve, waitTimeInMs))
+
+	sleep: (waitTimeInMs) => new Promise(resolve => setTimeout(resolve, waitTimeInMs)),
+
+	processRequestEvent : (event)=>{
+		function parseCookies (event) {
+			try{
+				var list = {},
+					rc = event.headers.cookie;
+			
+				rc && rc.split(';').forEach(function( cookie ) {
+					var parts = cookie.split('=');
+					list[parts.shift().trim()] = decodeURI(parts.join('='));
+				});
+			
+				return list;
+			}catch(e){
+				return [];
+			}
+		}
+
+		var data = {};
+		var isELB = (typeof event.requestContext!='undefined' && typeof event.requestContext.elb!='undefined' )?true:false;
+
+		// Definir objeto general
+		data = { isELB:isELB, type:"", headers:{}, get:{}, query:{}, post:{} };
+		
+		// Tipo de request y headers
+		data.type = event.httpMethod;
+		data.query = (event.queryStringParameters==null)?{}:event.queryStringParameters;
+		data.get = data.query;
+		
+		// Definición de GET
+		if(typeof event.path != "undefined" || typeof event.path != "rawPath"){
+			
+			var startParamsIn = (typeof event.startParamsIn != "undefined" && !isNaN(event.startParamsIn))?parseInt(event.startParamsIn):2;
+			
+			var path = event.path || event.rawPath || "";
+				path = path.split("/");
+			if(typeof path[0+startParamsIn] != "undefined") data.get.acc =  path[0+startParamsIn];
+			if(typeof path[1+startParamsIn] != "undefined") data.get.fnc =  path[1+startParamsIn];
+			if(typeof path[2+startParamsIn] != "undefined") data.get.prm =  path[2+startParamsIn];
+			if(typeof path[3+startParamsIn] != "undefined") data.get.prm2 = path[3+startParamsIn];
+			if(typeof path[4+startParamsIn] != "undefined") data.get.prm3 = path[4+startParamsIn];
+			if(typeof path[5+startParamsIn] != "undefined") data.get.prm4 = path[5+startParamsIn];
+			if(typeof path[6+startParamsIn] != "undefined") data.get.prm5 = path[6+startParamsIn];
+			if(typeof path[7+startParamsIn] != "undefined") data.get.prm6 = path[7+startParamsIn];
+		}
+		
+		
+		// Definición de POST
+		if(typeof event.body!="undefined" && event.body!=null){
+			try {
+				if(typeof event.headers['content-type'] != "undefined" && String(event.headers['content-type']).indexOf("application/x-www-form-urlencoded") != -1) {
+					let form = tools.base64_decode(event.body);
+						form = decodeURI(form);
+					data.post = parse(form);
+					}else{
+					data.post = JSON.parse(event.body);
+					}	        	
+			} catch (e) {
+				data.post = event.body;
+			}
+		}
+		
+		// Headers de la solicitud
+		data.headers = event.headers;
+		
+		data.cookies = parseCookies(event);
+		
+		return data;
+	}
+	
 };
 
 
@@ -70,7 +141,8 @@ exports.handler = async (event, context, lambdaCallback) => {
 	    
 	    // Procesar entrada
 	    // CWE Payload: {"queryStringParameters":{"prm":"check"}}
-	    var data = tools.processRequestEvent(event);
+		event.startParamsIn = 1;
+	    var data = utils.processRequestEvent(event);
 	    
 	    if(typeof event.Records != "undefined"){
 	    	data.get.acc = "Lambda-SQS-Trigger";
@@ -102,7 +174,7 @@ exports.handler = async (event, context, lambdaCallback) => {
 	                		await utils.responder(-404, data, "No existe el metodo buscado...", 404);
 	                	}
 	    	        }else{
-	                	await utils.responder(-404, data, "No existe el modulo buscado...", 404);
+	                	await utils.responder(-404, [data,event], "No existe el modulo buscado...", 404);
 	    	        }
 	    	        break;
 		    }
