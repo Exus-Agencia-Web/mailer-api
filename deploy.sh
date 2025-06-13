@@ -39,7 +39,7 @@ echo "Desplegando el proyecto"
 sam build --profile=$CLOUD
 sam deploy --profile=$CLOUD --region=$ZONE
 
-#rm -rf .aws-sam
+rm -rf .aws-sam
 
 echo ""
 echo "Listo!"

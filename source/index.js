@@ -135,9 +135,10 @@ exports.handler = async (event, context, lambdaCallback) => {
 	
 		// MODULOS //
 		var modulosPGE = {};
-		modulosPGE.mailer = require("modulos/mailer.js");
-		modulosPGE.queue = require("modulos/queue.js");
-		modulosPGE.voice = require("modulos/voice.js");
+			modulosPGE.mailer = require("modulos/mailer.js");
+			modulosPGE.queue = require("modulos/queue.js");
+			modulosPGE.voice = require("modulos/voice.js");
+			modulosPGE.email = require("modulos/email.js");
 	    
 	    // Procesar entrada
 	    // CWE Payload: {"queryStringParameters":{"prm":"check"}}
