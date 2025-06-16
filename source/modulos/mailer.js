@@ -1,9 +1,7 @@
 const htmlToText = require('html-email-to-text');
 const core = require('PageGearCoreNode');
 const extend = require("extend");
-
-const dbm = extend(true, {}, core.db);
-dbm.config.db = "pagegear_mailer";
+const util = require('util');
 
 const messageLoopTimmer = 'PageGearMailerLoop';
 const messagesQueue = "https://sqs.us-east-1.amazonaws.com/098497473728/PageGear-Mailer";
@@ -219,7 +217,38 @@ var mailer = {
     	await core.sqs.m.add(MailerReportQueue,report).catch();
     	
     	return 1;
+    },
+
+    getCampaigns: async (utils, params, context) => {
+        let cuenta = await utils.validarApiKey(utils, params);
+        
+        var SQL = util.format(
+            "SELECT * FROM m_campanas WHERE id_mailer=%s ORDER BY fecha_ultimo_uso DESC LIMIT 30",
+            utils.db.getSQLV(cuenta.id)
+        );
+        let data = await utils.db.conector(SQL);
+        if(!!data){
+            return data;
+        }else{
+            return await utils.apiError(-1, "No se encontraron campañas");
+        }
+    },
+
+    getSenders: async (utils, params, context) => {
+        let cuenta = await utils.validarApiKey(utils, params);
+        
+        var SQL = util.format(
+            "SELECT * FROM remitentes WHERE id_mailer=%s ORDER BY email asc LIMIT 30",
+            utils.db.getSQLV(cuenta.id)
+        );
+        let data = await utils.db.conector(SQL);
+        if(!!data){
+            return data;
+        }else{
+            return await utils.apiError(-1, "No se encontraron remitentes..");
+        }
     }
+
 };
 
 module.exports = mailer;

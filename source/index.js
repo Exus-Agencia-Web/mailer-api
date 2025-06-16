@@ -1,8 +1,22 @@
 var lambda_cb;
-const { tools } = require("PageGearCoreNode");
+const extend = require("extend");
+const { tools,session,db } = require("PageGearCoreNode");
 
 
 // UTILIDADES 
+/**
+ * Funciones utilitarias para formateo de respuestas API, procesamiento de solicitudes y validación.
+ * 
+ * @namespace utils
+ * 
+ * @property {function} responder - Formatea y envía una respuesta HTTP con estado, datos y mensaje.
+ * @property {function} apiResp - Atajo para enviar una respuesta exitosa de API.
+ * @property {function} apiError - Atajo para enviar una respuesta de error de API.
+ * @property {function} isJson - Verifica si una cadena es JSON válido.
+ * @property {function} sleep - Retorna una promesa que se resuelve después de un tiempo en milisegundos.
+ * @property {function} processRequestEvent - Procesa un evento de AWS Lambda y extrae los datos de la solicitud.
+ * @property {function} validarApiKey - Valida la API key de los headers y obtiene la información de la cuenta.
+ */
 var utils = {
 
 	responder : async (status, dataset = null,status_message = null, httpcode = 200) => {
@@ -122,6 +136,28 @@ var utils = {
 		data.cookies = parseCookies(event);
 		
 		return data;
+	},
+
+	validarApiKey: async (utils, data,useReturn=false) => {
+		if(typeof data.headers['x-api-key'] != "undefined"){
+			let cuenta = utils.session.get("cuenta");
+			if(typeof cuenta != "undefined"){
+				return cuenta;
+			}else{
+				var SQL = "SELECT id,id_pge,id_proveedor,id_listanegra,cliente as nombre,email_notificaciones,creditos FROM mailer where api_key=" + utils.db.getSQLV(data.headers['x-api-key']);
+				let accountDataset = await utils.db.getFilaSqlQuery(SQL);
+				if(accountDataset!=false){
+					utils.session.set("cuenta", accountDataset);
+					return accountDataset;
+				}else{
+					if(typeof useReturn == "undefined") await utils.apiError(-403, "API Key no valida [2]");
+					return false;
+				}
+			}
+		} else {
+			if(typeof useReturn == "undefined") await utils.apiError(-403, "API Key no valida [1]");
+			return false;
+		}
 	}
 	
 };
@@ -132,19 +168,28 @@ exports.handler = async (event, context, lambdaCallback) => {
 	    // Inicializar callback
 	    lambda_cb = lambdaCallback;
 		context.callbackWaitsForEmptyEventLoop = false;
-	
+
+		// Inicializar Base de Datos
+		utils.db = extend(true, {}, db);
+		utils.db.config.db = "pagegear_mailer";
+
+	    // Procesar entrada
+		event.startParamsIn = 1;
+	    var data = utils.processRequestEvent(event);
+
+		// Inicializar Session
+		var sessionID = data.headers['x-api-key'] || false;
+			utils.session = session;
+			await utils.session.start(sessionID);
+		
 		// MODULOS //
 		var modulosPGE = {};
 			modulosPGE.mailer = require("modulos/mailer.js");
 			modulosPGE.queue = require("modulos/queue.js");
 			modulosPGE.voice = require("modulos/voice.js");
 			modulosPGE.email = require("modulos/email.js");
-	    
-	    // Procesar entrada
-	    // CWE Payload: {"queryStringParameters":{"prm":"check"}}
-		event.startParamsIn = 1;
-	    var data = utils.processRequestEvent(event);
-	    
+
+
 	    if(typeof event.Records != "undefined"){
 	    	data.get.acc = "Lambda-SQS-Trigger";
 	    }
