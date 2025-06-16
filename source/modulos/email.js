@@ -36,7 +36,7 @@ var email = {
             mensaje = core.tools.str_replace("(("+key+"))",val,mensaje);
         });
     
-        mensaje = core.tools.str_replace("{campana_preview_text}",params.portada,mensaje);
+        mensaje = core.tools.str_replace("{text-preview}",params.portada,mensaje);
     
     
         var mailOptions = {
