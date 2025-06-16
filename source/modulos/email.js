@@ -2,26 +2,11 @@ const core = require('PageGearCoreNode');
 const extend = require("extend");
 const axios = require("axios");
 
-var email = {
+var internal = {
 
-    OAuthTest: async(utils, params, context)=>{
-		let utilsTmp = extend(true, {}, utils);
-        let valid = await utils.validarApiKey(utilsTmp, params,true);
-        if(!valid){
-            return await utils.responder(-1, {}, "Invalid Key!", 401);
-        }else{
-            return await utils.responder(1,{}, "Good Key!", 200);
-        }
-    },
+    enviarEmail: async(params)=>{
 
-    send: async(utils, params, context)=>{
-        let cuenta = await utils.validarApiKey(utils, params);
-        return cuenta;
-    },
-
-    procesarMensaje: async(params)=>{
-
-        var vars = params.mensaje;
+        var vars = params.vars || {};
         var asunto = params.asunto;
         var mensaje = params.contenido;
     
@@ -59,21 +44,61 @@ var email = {
             estado = 2;
             messageId = '';
         }
-        
-        // Reportar envío
-        // var report = {
-        //     type: 'ses-send-report',
-        //     id_envio:params.envio.id,
-        //     email: params.mensaje.ToEmail,
-        //     id_remoto: messageId,
-        //     estado:estado,
-        //     data: err,
-        //     ts: Math.floor(Date.now()/1000)
-        // };
-        // await core.sqs.m.add(MailerReportQueue,report).catch();
-        
+
         return 1;
     },
+
+};
+
+var email = {
+
+    OAuthTest: async(utils, params, context)=>{
+		let utilsTmp = extend(true, {}, utils);
+        let valid = await utils.validarApiKey(utilsTmp, params,true);
+        if(!valid){
+            return await utils.responder(-1, {}, "Invalid Key!", 401);
+        }else{
+            return await utils.responder(1,{}, "Good Key!", 200);
+        }
+    },
+
+    send: async(utils, params, context)=>{
+        let cuenta = await utils.validarApiKey(utils, params);
+
+        // Insertarlo en la base de datos
+        let emailID = await utils.db.conector();
+
+        // Enviar el email
+        let dataset = {
+            vars: {
+                id: emailID
+            },
+            email: params.email,
+            asunto: params.asunto,
+            contenido: params.contenido,
+            preview: params.preview,
+            remitente_nombre: cuenta.remitente_nombre,
+            remitente: cuenta.remitente
+        };
+        await internal.enviarEmail(dataset);
+        
+        return await utils.responder(1, {emailID: emailID}, "Email enviado!");
+    },
+
+	pixel: async(data)=>{
+
+		let response = {
+			"statusCode": 200,
+			"headers": {
+				"content-type": "image/png"
+			},
+			"body": "R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=",
+			"isBase64Encoded": true
+		};
+
+		return response;
+	},
+	
 
     template: async(utils, params, context)=>{},
     
