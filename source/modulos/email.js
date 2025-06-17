@@ -46,7 +46,7 @@ var internal = {
             messageId = '';
         }
 
-        return {mailOptions,send};
+        return messageId;
     },
 
 };
@@ -65,43 +65,46 @@ var email = {
 
     send: async(utils, params, context)=>{
         let cuenta = await utils.validarApiKey(utils, params);
-        //Get envio
+        //Obtener el envio
         let sqlCampaing  = util.format(
             "SELECT * FROM m_campanas WHERE id_mailer=%s AND id = %s",
             utils.db.getSQLV(cuenta.id),
             utils.db.getSQLV(params.post.campaignId)
         );
         let campaign = await utils.db.getFilaSqlQuery(sqlCampaing);
-        // return {campaign}
+
         // Insertarlo en la base de datos
         let sql = util.format("INSERT INTO `m_transaccional` (`id_mailer`, `estado`, `segmento`, `asunto`, `mensaje`, `remitente`, `remitente_nombre`, `data`) VALUES(%s,%s,%s,%s,%s,%s,%s,%s) ", 
             utils.db.getSQLV(cuenta.id),
             utils.db.getSQLV('Enviado'),
             utils.db.getSQLV(''),
             utils.db.getSQLV(params.post.subject),
-            utils.db.getSQLV(campaign.constenido),
+            utils.db.getSQLV(campaign.contenido),
             utils.db.getSQLV(params.post.remitenteId),
             utils.db.getSQLV(params.post.remitenteName),
             utils.db.getSQLV(JSON.stringify(params.post))
         );
         await utils.db.conector(sql);
         let emailID = utils.db.queryResp.filas.insertId || 0;
-        //return {sql,emailID}
         // Enviar el email
         let dataset = {
             vars: {
-                id: emailID
+                id: emailID,
+                ... params.post.variables
             },
             email: params.post.to,
             asunto: params.post.subject,
             contenido: campaign.contenido,
-            preview: 's',
-            remitente_nombre:  "Sin Nombre",
-            remitente: params.post.remitenteId
+            template: '{contenido}',
+            preview: '',
+            remitente_nombre:  params.post.remitenteName,
+            remitente: params.post.remitenteName
         };
         let sendEmail = await internal.enviarEmail(dataset);
-        
-        return await utils.responder(1, {emailID,sendEmail,dataset}, "Email enviado!");
+        if(sendEmail == false){
+            return await utils.responder(1, [], "Email no enviado!");
+        }
+        return await utils.responder(1, {emailID,sendEmail}, "Email enviado!");
     },
 
 	pixel: async(data)=>{

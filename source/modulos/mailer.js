@@ -18,42 +18,6 @@ var mailer = {
         // return await mailer.obtenerMensajes(utils, params, context, [], true);
         return await core.cwe.disable(messageLoopTimmer).catch(); 
     },
-    // n8n
-    getCampaignsTestN8N: async(utils, params) => {
-        let initFrom = (params['initFrom']) ? params['initFrom'] : 0;
-        let sql = dbm.format("SELECT * FROM `m_campanas` WHERE `id_mailer` = %s ", dbm.getSQLV(430));
-
-        if(params['q'] && $params['q'] != '')
-            sql += dbm.format(" and nombre like %s", dbm.getSQLV('%'+params['q']+'%'));
-
-        if(params['id'])
-            sql += dbm.format(" AND id = %s", dbm.getSQLV($params['id']));
-
-        sql += " order by `fecha_ultimo_uso` desc";
-
-        if(params['initFrom'])
-            $sql += dbm.format(" limit %s, 10", getSQLV(initFrom, 'int'));
-
-        let resp = await dbm.conector(sql);
-        if(resp != false){
-            await utils.apiResp(resp,200,'Campañas listadas');
-        }else{
-            await utils.apiError(-1,'Campañas no listadas');
-        }
-    },
-    getRemitentesTestN8N: async(utils, params) => {
-        let sql = dbm.format("SELECT * FROM `remitentes` WHERE `id_mailer` = %s;", dbm.getSQLV(430));
-	    let resp_remite = await dbm.conector(sql);
-	    let resp  = (resp_remite != false) ? resp_remite : [];
-	    await utils.apiResp(resp,200,'Remitentes listados');
-    },
-    sendCampaignsTestN8N: async(utils, params) => {
-        await utils.apiResp(params,200,'Datos enviados');
-    },
-    OAuthResponse: async(utils, params) => {
-        await utils.apiError(-1,'Api key invalida!');
-    },
-    //End n8n
     obtenerMensajes: async(utils, params, context, data = [], check = false) => {
         // Obtener envíos pendientes
         var mensajes = await core.sqs.m.get(messagesQueue, 10).catch();
@@ -233,7 +197,21 @@ var mailer = {
             return await utils.apiError(-1, "No se encontraron campañas");
         }
     },
-
+    getCampaign: async (utils, params, context) => {
+        let cuenta = await utils.validarApiKey(utils, params);
+        
+        var SQL = util.format(
+            "SELECT * FROM m_campanas WHERE id_mailer=%s AND id = %s",
+            utils.db.getSQLV(cuenta.id),
+            utils.db.getSQLV(params.post.id),
+        );
+        let data = await utils.db.conector(SQL);
+        if(!!data){
+            return data;
+        }else{
+            return await utils.apiError(-1, "No se encontraron campañas");
+        }
+    },
     getSenders: async (utils, params, context) => {
         let cuenta = await utils.validarApiKey(utils, params);
         
