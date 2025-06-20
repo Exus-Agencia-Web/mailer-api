@@ -10,6 +10,7 @@ var internal = {
         var vars = params.vars || {};
         var asunto = params.asunto;
         var mensaje = params.contenido;
+        var template = params.template;
     
     
         Object.keys(vars).forEach(function(key) {
@@ -21,6 +22,7 @@ var internal = {
             asunto = core.tools.str_replace("(("+key+"))",val,asunto);
             mensaje = core.tools.str_replace("(("+key+"))",val,mensaje);
         });
+        template = core.tools.str_replace("{asunto}",asunto,template);
     
         // mensaje = core.tools.str_replace("{text-preview}",params.portada,mensaje);
     
@@ -31,7 +33,8 @@ var internal = {
             to: 		params.email,
             subject: 	asunto,
             html: 		mensaje,
-            text:       htmlToText(mensaje)
+            text:       htmlToText(mensaje),
+            template:   template
         };
         var send = await core.mail.send(mailOptions).catch();
         
@@ -67,12 +70,22 @@ var email = {
         let cuenta = await utils.validarApiKey(utils, params);
         //Obtener el envio
         let sqlCampaing  = util.format(
-            "SELECT * FROM m_campanas WHERE id_mailer=%s AND id = %s",
+            "SELECT id,contenido,plantilla FROM m_campanas WHERE id_mailer=%s AND id = %s",
             utils.db.getSQLV(cuenta.id),
             utils.db.getSQLV(params.post.campaignId)
         );
         let campaign = await utils.db.getFilaSqlQuery(sqlCampaing);
-
+        //Obtener la plantilla
+        let sqlTemplate  = util.format(
+            "SELECT id,html,css FROM m_plantillas WHERE id = %s",
+            utils.db.getSQLV(campaign.plantilla)
+        );
+        let template = {html:"{contenido}"};
+        let requestTemplate = await utils.db.getFilaSqlQuery(sqlTemplate);
+        if(requestTemplate != false){
+            template.html = core.tools.str_replace("{contenidosdelformato}","{contenido}",requestTemplate.html);
+            template.html = core.tools.str_replace("</head>","<style>"+requestTemplate.css+"</style></head>",template.html);
+        }
         // Insertarlo en la base de datos
         let sql = util.format("INSERT INTO `m_transaccional` (`id_mailer`, `estado`, `segmento`, `asunto`, `mensaje`, `remitente`, `remitente_nombre`, `data`) VALUES(%s,%s,%s,%s,%s,%s,%s,%s) ", 
             utils.db.getSQLV(cuenta.id),
@@ -95,7 +108,7 @@ var email = {
             email: params.post.to,
             asunto: params.post.subject,
             contenido: campaign.contenido,
-            template: '{contenido}',
+            template: `${template.html}`,
             preview: '',
             remitente_nombre:  params.post.remitenteName,
             remitente: params.post.remitenteName
