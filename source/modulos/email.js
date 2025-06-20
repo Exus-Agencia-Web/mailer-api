@@ -36,7 +36,7 @@ var internal = {
             text:       htmlToText(mensaje),
             template:   template
         };
-        var send = await core.mail.send(mailOptions).catch();
+        var send = await core.mail.sendTransactional(mailOptions).catch();
         
         var err, estado, messageId;
         if(typeof send.messageId != "undefined"){
